@@ -65,6 +65,23 @@ app.include_router(dashboard_router)
 app.include_router(transactions_router)
 app.include_router(evaluation_router)
 
+@app.get("/", tags=["Root"])
+def root_endpoint() -> Dict[str, Any]:
+    """Root endpoint confirming API status and providing quick documentation links."""
+    return {
+        "service": "RecoverAI — Context-Aware Autonomous Revenue Recovery Agent",
+        "track": "Razorpay Buildathon Track 3: AI Revenue Recovery",
+        "status": "operational",
+        "version": "2.0.0",
+        "docs_url": "/docs",
+        "health_url": "/health",
+        "endpoints": {
+            "dashboard_metrics": "/api/dashboard/metrics",
+            "transactions": "/api/transactions",
+            "rag_evaluation": "/rag/evaluation"
+        }
+    }
+
 @app.get("/health", tags=["Health"])
 def health_check() -> Dict[str, Any]:
     """Health check endpoint confirming backend operational status."""
