@@ -18,7 +18,10 @@ from routes.evaluation import router as evaluation_router
 async def lifespan(app: FastAPI):
     # Startup: Ensure tables exist and database has seed data
     print("Initializing RecoverAI database...")
-    seed_database_if_empty()
+    try:
+        seed_database_if_empty()
+    except Exception as e:
+        print(f"[WARNING] Database initialization encountered an error: {e}. RecoverAI continuing with operational endpoints.")
     yield
     print("RecoverAI shutdown.")
 

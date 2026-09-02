@@ -18,29 +18,44 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent
 
-# Database Connection: Supabase PostgreSQL if provided, otherwise local SQLite
+# Database Connection: Supabase PostgreSQL if reachable, with resilient SQLite fallback
 DATABASE_URL = os.getenv("DATABASE_URL") or os.getenv("SUPABASE_DB_URL")
-if DATABASE_URL:
-    # SQLAlchemy 2.0 requires 'postgresql://' instead of legacy 'postgres://'
-    if DATABASE_URL.startswith("postgres://"):
-        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-is_sqlite = not DATABASE_URL or DATABASE_URL.startswith("sqlite")
+SQLITE_PATH = BASE_DIR / "recoverai.db"
+SQLITE_URL = f"sqlite:///{SQLITE_PATH}"
 
-if is_sqlite:
-    if not DATABASE_URL:
-        SQLITE_PATH = BASE_DIR / "recoverai.db"
-        DATABASE_URL = f"sqlite:///{SQLITE_PATH}"
-    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+def create_db_engine(url: str):
+    if not url or url.startswith("sqlite"):
+        return create_engine(url or SQLITE_URL, connect_args={"check_same_thread": False})
+    else:
+        # 5-second timeout on connect to avoid startup freezes if cloud host is IPv6 or paused
+        return create_engine(
+            url,
+            pool_pre_ping=True,
+            pool_recycle=300,
+            pool_size=5,
+            max_overflow=10,
+            connect_args={"connect_timeout": 5}
+        )
+
+# Initialize engine with resilient fallback
+engine = None
+if DATABASE_URL and not DATABASE_URL.startswith("sqlite"):
+    try:
+        candidate_engine = create_db_engine(DATABASE_URL)
+        with candidate_engine.connect() as test_conn:
+            pass
+        engine = candidate_engine
+        print(f"[DATABASE] Connected successfully to PostgreSQL host: {engine.url.host}")
+    except Exception as e:
+        target = DATABASE_URL.split("@")[-1] if "@" in DATABASE_URL else "PostgreSQL"
+        print(f"[WARNING] Could not connect to PostgreSQL ({target}): {e}")
+        print(f"[FALLBACK] Gracefully falling back to local SQLite database: {SQLITE_PATH}")
+        engine = create_db_engine(SQLITE_URL)
 else:
-    # Production PostgreSQL (Supabase / Render) with connection health checks
-    engine = create_engine(
-        DATABASE_URL,
-        pool_pre_ping=True,
-        pool_recycle=300,
-        pool_size=10,
-        max_overflow=20
-    )
+    engine = create_db_engine(SQLITE_URL)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -391,7 +406,15 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 def init_db():
-    Base.metadata.create_all(bind=engine)
+    global engine, SessionLocal
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"[WARNING] Table initialization failed on active engine: {e}")
+        print(f"[FALLBACK] Switching session to SQLite: {SQLITE_PATH}")
+        engine = create_db_engine(SQLITE_URL)
+        SessionLocal.configure(bind=engine)
+        Base.metadata.create_all(bind=engine)
 
 def seed_database_if_empty():
     """Initializes and seeds database with the 5 Buildathon Demo Scenarios plus 75 realistic records."""
