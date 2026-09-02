@@ -20,7 +20,7 @@
 [![SQLite](https://img.shields.io/badge/SQLite-Zero--Config_Fallback-003B57?logo=sqlite&logoColor=white)](https://sqlite.org)
 [![PaySim ML](https://img.shields.io/badge/PaySim_ML-0.9993_ROC--AUC-FF6F00?logo=scikit-learn&logoColor=white)](https://scikit-learn.org)
 [![RAG Benchmark](https://img.shields.io/badge/RAG_Benchmark-92.8%25_Faithfulness-blueviolet)](#4-automated-rag-policy-knowledge-store)
-[![Tests Passing](https://img.shields.io/badge/Tests-14%2F14_Passing-brightgreen)](tests/test_recovery.py)
+[![Tests Passing](https://img.shields.io/badge/Tests-15%2F15_Passing-brightgreen)](backend/tests/test_recovery.py)
 
 ---
 
@@ -339,6 +339,37 @@ npm run dev -- --port 5173
 ```
 - Web Application Dashboard: [http://localhost:5173](http://localhost:5173)
 
+### 3. Production Deployment on Render
+
+RecoverAI includes a turnkey [`render.yaml`](render.yaml) blueprint for 1-click deployment on Render:
+
+#### Option A: 1-Click Render Blueprint (Recommended)
+1. In Render Dashboard, click **New +** → **Blueprint**.
+2. Connect your repository (`RecoverAI-Payment_Recovery_Agent`).
+3. Render will read `render.yaml` and configure:
+   - **Backend Web Service** (`recoverai-backend`) with Python 3.11, `uv sync`, and health check.
+   - **Frontend Static Site** (`recoverai-frontend`) with automatic `VITE_API_URL` linking.
+4. Provide your `DATABASE_URL` (Supabase PostgreSQL) in the Render dashboard prompt.
+
+#### Option B: Manual Setup on Render
+* **Backend Web Service**:
+  - **Environment**: `Python 3`
+  - **Root Directory**: `backend`
+  - **Build Command**: `pip install uv && uv sync`
+  - **Start Command**: `uv run uvicorn main:app --host 0.0.0.0 --port $PORT`
+  - **Health Check Path**: `/health`
+  - **Environment Variables**:
+    - `DATABASE_URL`: `postgresql://postgres:[PASSWORD]@db.[REF].supabase.co:5432/postgres`
+    - `FRONTEND_URL`: `https://[YOUR_RENDER_FRONTEND_URL].onrender.com`
+    - `PYTHON_VERSION`: `3.11.9`
+* **Frontend Static Site**:
+  - **Root Directory**: `frontend/recoverai-dashboard`
+  - **Build Command**: `npm install && npm run build`
+  - **Publish Directory**: `dist`
+  - **Environment Variables**:
+    - `VITE_API_URL`: `https://[YOUR_RENDER_BACKEND_URL].onrender.com`
+  - **Redirects/Rewrites**: Rewrite `/*` to `/index.html`
+
 ---
 
 ## 10. Hackathon Pitch Script (For Judges)
@@ -362,6 +393,7 @@ When demonstrating RecoverAI to Razorpay hackathon judges:
 
 ```
 recoverai/
+├── render.yaml                        # Render Blueprint for 1-click cloud deployment
 ├── README.md                          # Comprehensive project documentation
 ├── PROJECT_OVERVIEW.md                # Architectural specification & pitch script
 ├── backend/
@@ -377,6 +409,8 @@ recoverai/
 │   │   ├── evaluate_model.py          # PaySim ML inference & feature extraction logic
 │   │   ├── fraud_model.pkl            # Pre-trained PaySim RandomForestClassifier
 │   │   └── train_model.py             # Model training & ROC-AUC verification script
+│   ├── pyproject.toml                 # Backend dependencies managed via uv
+│   ├── requirements.txt               # Universal Python requirements for Render/pip
 │   ├── routes/
 │   │   ├── api.py                     # Primary /api/* REST router
 │   │   ├── dashboard.py               # Dashboard metrics router
@@ -392,7 +426,7 @@ recoverai/
 │   │   └── recovery.py                # Pipeline execution & transaction analysis
 │   ├── supabase_schema.sql            # PostgreSQL schema script for Supabase
 │   └── tests/
-│       └── test_recovery.py           # 14 unit & integration tests
+│       └── test_recovery.py           # 15 unit & integration tests
 └── frontend/
     └── recoverai-dashboard/           # React 19 + Vite + Tailwind CSS dashboard
         ├── src/

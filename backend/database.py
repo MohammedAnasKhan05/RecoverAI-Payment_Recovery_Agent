@@ -20,14 +20,28 @@ BASE_DIR = Path(__file__).resolve().parent
 
 # Database Connection: Supabase PostgreSQL if provided, otherwise local SQLite
 DATABASE_URL = os.getenv("DATABASE_URL") or os.getenv("SUPABASE_DB_URL")
-if not DATABASE_URL:
-    SQLITE_PATH = BASE_DIR / "recoverai.db"
-    DATABASE_URL = f"sqlite:///{SQLITE_PATH}"
+if DATABASE_URL:
+    # SQLAlchemy 2.0 requires 'postgresql://' instead of legacy 'postgres://'
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-# Connect args for SQLite compatibility
-connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+is_sqlite = not DATABASE_URL or DATABASE_URL.startswith("sqlite")
 
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
+if is_sqlite:
+    if not DATABASE_URL:
+        SQLITE_PATH = BASE_DIR / "recoverai.db"
+        DATABASE_URL = f"sqlite:///{SQLITE_PATH}"
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    # Production PostgreSQL (Supabase / Render) with connection health checks
+    engine = create_engine(
+        DATABASE_URL,
+        pool_pre_ping=True,
+        pool_recycle=300,
+        pool_size=10,
+        max_overflow=20
+    )
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

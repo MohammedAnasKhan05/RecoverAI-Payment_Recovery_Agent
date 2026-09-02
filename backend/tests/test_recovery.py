@@ -218,3 +218,14 @@ def test_demo_scenario_5_unfavorable_recovery(client):
     data = res.json()
     assert data["execution_result"] == "STOPPED"
     assert data["transaction"]["status"] == "STOPPED"
+
+def test_health_endpoint(client):
+    """Verifies that the /health endpoint returns 200 with operational status."""
+    res = client.get("/health")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "healthy"
+    assert data["guardrails"] == "Active"
+    assert data["rag_engine"] == "Operational"
+    assert "database" in data
+
