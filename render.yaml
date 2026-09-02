@@ -14,6 +14,8 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
+      - key: UV_PROJECT_ENVIRONMENT
+        value: .venv
       - key: DATABASE_URL
         sync: false # Set in Render Dashboard: postgresql://postgres:[PASSWORD]@db.[REF].supabase.co:5432/postgres
       - key: SUPABASE_URL
