@@ -1,0 +1,64 @@
+ESCALATION AND STOP SAFETY POLICY
+
+1. Scope
+
+This policy defines the universal safety guardrails governing automated
+revenue recovery decisions across all payment instruments.
+
+This policy takes precedence over instrument-specific recovery policies.
+
+2. Mandatory Escalation Triggers
+
+A transaction MUST be escalated for manual review when:
+
+- fraud_probability > 0.70
+- transaction amount > INR 50,000
+
+Automated recovery must not be executed before the required review.
+
+3. Mandatory Stop Triggers
+
+Automated recovery MUST STOP when:
+
+- attempt_number >= 2
+- recovery_probability < 0.30
+- transaction status is already SUCCESS
+- transaction status cannot be safely determined
+- the transaction has already been successfully debited
+- the failure is classified as non-retryable
+
+4. Priority Order
+
+Safety rules must be evaluated before any recovery action.
+
+Priority:
+
+1. SUCCESS / completed transaction → STOP
+2. Fraud risk > 0.70 → ESCALATE
+3. Amount > INR 50,000 → ESCALATE
+4. Retry limit reached → STOP
+5. Recovery probability < 0.30 → STOP
+6. Otherwise → evaluate instrument-specific policy
+
+5. Action Recommendation
+
+fraud_probability > 0.70
+    → ESCALATE
+
+amount > 50,000
+    → ESCALATE
+
+attempt_number >= 2
+    → STOP
+
+recovery_probability < 0.30
+    → STOP
+
+Otherwise:
+    → Continue to instrument-specific recovery policy.
+
+6. Safety Principle
+
+AI recommendations must never override these safety rules.
+
+The deterministic safety policy always takes precedence over the AI agent.

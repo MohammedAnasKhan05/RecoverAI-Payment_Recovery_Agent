@@ -1,0 +1,316 @@
+# UPI PAYMENT RETRY & RECOVERY POLICY
+
+## 1. Scope
+
+This policy applies to failed, pending, or unsuccessful UPI payment transactions, particularly merchant payments where the payment may still be recoverable.
+
+The policy is intended to guide automated recovery decisions while preventing excessive retries, duplicate payment attempts, and inappropriate automated actions.
+
+---
+
+## 2. Failure Classification
+
+UPI failures should first be classified according to the reason for failure.
+
+### Retryable / Transient Failures
+
+The following failures may be considered for a controlled retry:
+
+* Network timeout
+* Gateway timeout
+* Temporary bank/PSP unavailability
+* Transient technical failure
+* Temporary communication failure
+
+A retry should only be considered when the transaction has not already been successfully completed or settled.
+
+### Non-Retryable Failures
+
+The following conditions should generally NOT trigger an automatic retry:
+
+* Incorrect UPI PIN
+* Account blocked or restricted
+* Insufficient funds
+* Explicit user rejection
+* Fraud or suspicious transaction indicators
+* Permanent bank/account-related failures
+* Retry limit already reached
+
+NPCI notes that repeated incorrect UPI-PIN attempts may result in a temporary block, depending on the bank.
+
+---
+
+## 3. Retry Decision
+
+A UPI transaction may be automatically retried only when:
+
+* The failure is classified as transient.
+* The transaction has not already succeeded.
+* Fraud risk is below the configured threshold.
+* The retry limit has not been reached.
+* The transaction is within the merchant's permitted recovery window.
+* No conflicting payment confirmation exists.
+
+Example:
+
+FAILURE_REASON = timeout
+PAYMENT_METHOD = UPI
+FRAUD_RISK < 70%
+ATTEMPTS < MAX_RETRIES
+
+→ RETRY
+
+---
+
+## 4. Retry Limits
+
+RecoverAI must enforce a configurable retry limit.
+
+For the MVP:
+
+* Maximum automatic retries: 2
+* After the retry limit is reached → STOP automatic recovery.
+* Further action requires escalation or manual review.
+
+The limit is an application-level safety rule for RecoverAI and should not be presented as a universal NPCI rule.
+
+Specific UPI flows can have different operational retry rules. For example, NPCI's UPI Reserve Pay guidance permits acquiring entities to retry certain timeout/debit scenarios up to 3 times within 24 hours, while stating that other declines should not be retried.
+
+---
+
+## 5. Transaction Status Verification
+
+Before executing another recovery attempt, RecoverAI should verify the latest transaction status.
+
+If the transaction is already successful:
+
+→ STOP all recovery actions.
+
+If the transaction is pending:
+
+→ Do not immediately create another payment attempt.
+
+→ Wait for status confirmation or follow the applicable reconciliation process.
+
+NPCI explains that UPI transaction status can remain pending when there is a delay at the beneficiary-bank end.
+
+---
+
+## 6. Customer Account Debited but Merchant Not Confirmed
+
+If the customer's account has been debited but the merchant has not received confirmation, RecoverAI must NOT blindly retry the payment.
+
+The system should:
+
+1. Check the transaction status.
+2. Attempt reconciliation/status verification.
+3. Avoid creating a duplicate debit.
+4. Escalate if the final status cannot be determined.
+
+RBI's failed-transaction framework provides specific auto-reversal timelines for UPI. For a merchant payment where the account is debited but confirmation is not received at the merchant location, the framework specifies auto-reversal within T+5 days, with compensation for delays beyond the prescribed timeline.
+
+---
+
+## 7. Customer Account Debited but Beneficiary Not Credited
+
+For UPI fund transfers where the customer's account is debited but the beneficiary account is not credited, the transaction should be handled through status verification and reversal/reconciliation rather than blindly retrying.
+
+RBI's framework specifies auto-reversal by the beneficiary bank within T+1 day when the beneficiary cannot be credited.
+
+---
+
+## 8. High-Risk Transactions
+
+Automatic retry must be blocked when:
+
+* fraud_probability > 70%
+* transaction is flagged as suspicious
+* transaction has unusual risk characteristics
+* customer or merchant risk exceeds the configured threshold
+
+Action:
+
+→ ESCALATE
+
+The transaction should be sent for manual review rather than automatically retried.
+
+---
+
+## 9. High-Value Transactions
+
+For RecoverAI's automated recovery workflow:
+
+* Transactions above ₹50,000 require additional review.
+* Automatic recovery should not bypass the high-value guardrail.
+* The transaction should be escalated when the configured threshold is exceeded.
+
+Action:
+
+→ ESCALATE
+
+This ₹50,000 threshold is a RecoverAI business-rule/guardrail for the MVP, NOT an NPCI UPI transaction limit.
+
+---
+
+## 10. Recovery Probability
+
+RecoverAI should estimate the probability that another recovery action will successfully recover the revenue.
+
+If:
+
+recovery_probability >= 70%
+
+→ Strong candidate for recovery.
+
+If:
+
+30% <= recovery_probability < 70%
+
+→ Controlled recovery / additional evaluation.
+
+If:
+
+recovery_probability < 30%
+
+→ STOP automatic recovery.
+
+The exact thresholds are RecoverAI's internal decision rules and should be configurable.
+
+---
+
+## 11. Action Recommendations
+
+### UPI + Timeout
+
+→ RETRY
+
+Only when risk and retry guardrails pass.
+
+### UPI + Temporary Technical Failure
+
+→ RETRY
+
+Only when the latest transaction status confirms that another attempt is safe.
+
+### UPI + Incorrect PIN
+
+→ STOP
+
+Do not automatically retry.
+
+### UPI + Insufficient Funds
+
+→ SEND_REMINDER or STOP
+
+Allow the customer to resolve the issue before another attempt.
+
+### UPI + Fraud/Suspicious Risk
+
+→ ESCALATE
+
+No automatic retry.
+
+### UPI + Retry Limit Reached
+
+→ STOP
+
+Manual intervention may be required.
+
+### UPI + Debited but Merchant Confirmation Missing
+
+→ VERIFY_STATUS
+
+Do not blindly retry.
+
+---
+
+## 12. Recovery Action Hierarchy
+
+RecoverAI should follow this priority:
+
+1. Check transaction status.
+2. Check fraud/risk score.
+3. Check retry count.
+4. Check transaction amount.
+5. Check recovery probability.
+6. Retrieve applicable UPI policy.
+7. Generate AI recommendation.
+8. Apply deterministic guardrails.
+9. Execute the approved recovery action.
+10. Record the result in the audit log.
+
+---
+
+## 13. Stopping Rules
+
+RecoverAI must immediately stop automated recovery when:
+
+* Payment becomes successful.
+* Fraud risk exceeds the threshold.
+* Retry limit is reached.
+* Transaction status becomes uncertain.
+* Transaction has already been debited successfully.
+* Recovery probability falls below the minimum threshold.
+* A high-value transaction requires manual approval.
+* The payment failure is classified as non-retryable.
+
+---
+
+## 14. Audit Requirements
+
+Every recovery attempt must record:
+
+* Transaction ID
+* Timestamp
+* Payment method
+* Failure reason
+* Attempt number
+* Fraud probability
+* Recovery probability
+* Retrieved policy
+* AI recommendation
+* Guardrail decision
+* Final action
+* Recovery result
+* Recovered amount
+
+Example:
+
+TRANSACTION: TX001
+FAILURE: UPI timeout
+FRAUD RISK: 2%
+RECOVERY PROBABILITY: 87%
+POLICY: UPI PAYMENT RETRY POLICY
+AI ACTION: RETRY
+GUARDRAIL: PASSED
+RESULT: SUCCESS
+RECOVERED: ₹4,999
+
+---
+
+## 15. RecoverAI Default Decision
+
+For the MVP:
+
+IF payment_method = UPI
+AND failure_reason = timeout
+AND fraud_probability < 70%
+AND attempt_number < 2
+AND recovery_probability >= 30%
+AND transaction_status != SUCCESS
+
+→ RETRY
+
+Otherwise, apply the appropriate escalation, stop, verification, or alternative recovery rule.
+
+---
+
+## 16. Compliance Note
+
+RecoverAI is an automated decision-support and recovery system.
+
+Its internal retry limits and risk thresholds are application-level controls and do not replace applicable NPCI, RBI, bank, PSP, or payment-provider rules.
+
+Where transaction status, reversal, refund, dispute, or reconciliation is involved, the system should follow the applicable payment-system process rather than attempting an additional payment blindly.
+
+NPCI provides official UPI circulars and operating guidance, while RBI specifies customer-protection and failed-transaction turnaround requirements.

@@ -1,0 +1,45 @@
+# Environments and dependencies
+.venv/
+venv/
+ENV/
+node_modules/
+dist/
+
+# Python caches and compiled bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Environment variables & secrets
+.env
+.env.*
+.env.local
+!.env.example
+
+# ML models and large artifacts
+*.pkl
+*.joblib
+# Keep the pre-trained PaySim fraud model binary
+!backend/ml/fraud_model.pkl
+!ml/fraud_model.pkl
+
+# Datasets and large raw data (Never commit 450MB Fraud.csv!)
+*.csv
+*.parquet
+Fraud.csv
+
+# SQLite and local databases
+*.db
+*.sqlite
+*.sqlite3
+recoverai.db
+
+# IDE and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+PROJECT_OVERVIEW.md

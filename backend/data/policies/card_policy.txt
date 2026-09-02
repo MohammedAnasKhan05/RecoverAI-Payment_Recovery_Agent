@@ -1,0 +1,61 @@
+CARD FAILURE ALTERNATE PAYMENT POLICY
+
+1. Scope
+
+This policy governs failed or declined credit card and debit card
+transactions.
+
+2. Retryable Conditions
+
+A card transaction may be considered for one controlled retry when:
+
+- the failure is classified as a temporary technical failure, and
+- the transaction has not already succeeded, and
+- all safety guardrails pass.
+
+Maximum automatic retry attempts for the MVP: 1.
+
+3. Non-Retryable Conditions
+
+The following failures should not be repeatedly retried:
+
+- Insufficient funds
+- Do not honor
+- 3DS authentication failure
+- Card blocked or expired
+- Invalid card details
+- Customer explicitly declines the payment
+
+The system should offer an alternate payment method instead.
+
+4. Alternate Payment Methods
+
+Possible alternatives include:
+
+- UPI
+- Netbanking
+- Another saved debit/credit card
+- UPI QR / intent
+
+5. Customer Experience
+
+Do not repeatedly attempt the same declined card.
+
+Where appropriate, present the customer with an alternate payment option.
+
+6. Action Recommendation
+
+failure_reason = card_declined
+    → ALTERNATE_PAYMENT
+
+temporary technical failure
+    → RETRY
+
+retry limit reached
+    → STOP
+
+high fraud risk
+    → ESCALATE
+
+high-value transaction
+    → ESCALATE

@@ -1,0 +1,74 @@
+CHECKOUT ABANDONMENT POLICY
+
+1. Scope
+
+This policy governs recovery actions for customers who start checkout
+but do not complete the payment.
+
+2. Permitted Recovery Actions
+
+RecoverAI may send payment reminders through:
+
+- WhatsApp
+- SMS
+- Email
+
+3. Reminder Schedule
+
+First reminder:
+
+30 minutes after checkout abandonment.
+
+Second reminder:
+
+24 hours after abandonment if payment remains incomplete.
+
+Maximum reminders:
+
+2.
+
+4. Stopping Conditions
+
+The reminder sequence MUST stop when:
+
+- payment is completed
+- customer explicitly cancels
+- recovery_probability < 0.30
+- maximum reminder count is reached
+- fraud risk > 0.70
+
+5. Fraud Handling
+
+High-risk abandoned transactions must not receive automated recovery
+reminders.
+
+Action:
+
+→ ESCALATE
+
+6. Action Recommendation
+
+failure_reason = abandoned
+    → SEND_REMINDER
+
+failure_reason = pending
+    → SEND_REMINDER / VERIFY_STATUS
+
+failure_reason = drop_off
+    → SEND_REMINDER
+
+reminder_count >= 2
+    → STOP
+
+recovery_probability < 0.30
+    → STOP
+
+fraud_probability > 0.70
+    → ESCALATE
+
+7. Customer Experience
+
+Messages should be concise and should provide the customer with a
+secure way to return to the existing checkout session.
+
+Do not create unnecessary duplicate payment sessions.

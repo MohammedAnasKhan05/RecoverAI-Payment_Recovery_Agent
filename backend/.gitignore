@@ -1,0 +1,41 @@
+# Python-generated files and caches
+__pycache__/
+*.py[oc]
+*.pyc
+*.pyd
+build/
+dist/
+wheels/
+*.egg-info
+.pytest_cache/
+
+# Virtual environments
+.venv
+venv/
+ENV/
+
+# Environment variables & secrets
+.env
+.env.*
+.env.local
+!.env.example
+
+# Local SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+recoverai.db
+
+# Large datasets & models
+*.csv
+*.parquet
+Fraud.csv
+*.joblib
+*.pkl
+!ml/fraud_model.pkl
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
