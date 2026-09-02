@@ -43,18 +43,20 @@ allowed_origins = [
 
 if frontend_url:
     for origin in frontend_url.split(","):
-        clean_origin = origin.strip().rstrip("/")
-        if clean_origin and clean_origin not in allowed_origins:
-            allowed_origins.append(clean_origin)
-    allow_wildcard = False
-else:
-    # Allow all origins if FRONTEND_URL is not yet specified
-    allow_wildcard = True
+        clean = origin.strip().rstrip("/")
+        if clean:
+            if clean.startswith("http://") or clean.startswith("https://"):
+                if clean not in allowed_origins:
+                    allowed_origins.append(clean)
+            else:
+                allowed_origins.append(f"https://{clean}")
+                allowed_origins.append(f"http://{clean}")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if allow_wildcard else allowed_origins,
-    allow_credentials=True if not allow_wildcard else False,
+    allow_origins=allowed_origins if frontend_url else ["*"],
+    allow_origin_regex=r"https://.*\.onrender\.com",
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
