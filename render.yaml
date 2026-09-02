@@ -20,15 +20,16 @@ services:
         sync: false # Set in Render Dashboard: https://[REF].supabase.co
       - key: FRONTEND_URL
         fromService:
-          type: static
+          type: web
           name: recoverai-frontend
           property: host
 
   # ====================================================
   # 2. RecoverAI React Frontend Static Site
   # ====================================================
-  - type: static
+  - type: web
     name: recoverai-frontend
+    runtime: static
     rootDir: frontend/recoverai-dashboard
     buildCommand: npm install && npm run build
     staticPublishPath: dist
